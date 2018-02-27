@@ -6,83 +6,138 @@ import MySQLdb
 import argparse
 import os
 
+from tables import *
+
+g_ecgID = 1
+g_intervalMeasurementID = 1
+g_waveformID = 1
+
 class ECGReader:
 
     def __init__(self, xmlName):
         self.DOMTree = xml.dom.minidom.parse(xmlName)
         self.collection = self.DOMTree.documentElement
 
-        patientDemoNode = self.collection.getElementsByTagName('PatientDemographics')
-        waveFormsNode = self.collection.getElementsByTagName('Waveform')
+        global g_ecgID
+        global g_intervalMeasurementID
+        global g_waveformID
 
-        # patient attribute
+        intervalMeasurementNode = None
+        measuredIntervalNodes = None
+        measuredAmplitudeNodes = None
 
-        patientDemo = patientDemoNode[0]
+        # get xml node
+        patientNode = self.collection.getElementsByTagName('PatientDemographics')[0]
+        testDemographicsNode = self.collection.getElementsByTagName('TestDemographics')[0]
+        restingECGMeasurementsNode = self.collection.getElementsByTagName('RestingECGMeasurements')[0]
+        originRestingECGMeasurementsNode = self.collection.getElementsByTagName('OriginalRestingECGMeasurements')[0]
+        diagnosisNode = self.collection.getElementsByTagName('Diagnosis')[0]
+        diagnosisStatmentNodes = diagnosisNode.getElementsByTagName('DiagnosisStatement')
+        originalDiagnosisNode = self.collection.getElementsByTagName('OriginalDiagnosis')[0]
+        originalDiagnosisStatmentNodes = originalDiagnosisNode.getElementsByTagName('DiagnosisStatement')
+        measurementMatrixNode = self.collection.getElementsByTagName('MeasurementMatrix')[0]
 
-        self.patientID = patientDemo.getElementsByTagName('PatientID')[0].firstChild.data
-        self.patientAge = patientDemo.getElementsByTagName('PatientAge')[0].firstChild.data
-        self.birth = patientDemo.getElementsByTagName('DateofBirth')[0].firstChild.data
-        self.gender = patientDemo.getElementsByTagName('Gender')[0].firstChild.data
+        if len(self.collection.getElementsByTagName('IntervalMeasurements')) != 0:
+            intervalMeasurementNode = self.collection.getElementsByTagName('IntervalMeasurements')[0]
+        if len(self.collection.getElementsByTagName('MeasuredInterval')) != 0:
+            measuredIntervalNodes = self.collection.getElementsByTagName('MeasuredInterval')
+        if len(self.collection.getElementsByTagName('MeasuredAmplitude')) != 0:
+            measuredAmplitudeNodes = self.collection.getElementsByTagName('MeasuredAmplitude')
 
-        print self.patientID
-        print self.patientAge
-        print self.birth
-        print self.gender
+        qrsTimesTypeNode = self.collection.getElementsByTagName('QRSTimesTypes')[0]
+        qrsNodes = qrsTimesTypeNode.getElementsByTagName('QRS')
+        waveFormsNode = self.collection.getElementsByTagName('Waveform')[0]
+        leadDataNodes = waveFormsNode.getElementsByTagName('LeadData')
+        pharmaDataNode = self.collection.getElementsByTagName('PharmaData')[0]
 
-        # waveform
-        waveFormMedian = waveFormsNode[0]
-        waveFormRythmn = waveFormsNode[1]
+        # generate class object
+        ecg = Ecg(testDemographicsNode, diagnosisNode)
+        patient = Patient(patientNode, g_ecgID)
+        measurements = Measurement(restingECGMeasurementsNode, g_ecgID)
+        originalMeasurements = Measurement(originRestingECGMeasurementsNode, g_ecgID)
 
-        self.medianLeadsCount = waveFormMedian.getElementsByTagName('NumberofLeads')[0].firstChild.data
-        self.medianSimpleBase = waveFormMedian.getElementsByTagName('SampleBase')[0].firstChild.data
-        self.medianHighPassFilter = waveFormMedian.getElementsByTagName('HighPassFilter')[0].firstChild.data
-        self.medianLowPassFilter = waveFormMedian.getElementsByTagName('LowPassFilter')[0].firstChild.data
+        for diag in diagnosisStatmentNodes:
+            ecg.diagnosis.append(Diagnosis(diag, g_ecgID))
 
-        medianLeadsData = waveFormMedian.getElementsByTagName('LeadData')
-        self.mLeadI = medianLeadsData[0].getElementsByTagName('WaveFormData')[0].firstChild.data
-        self.mLeadII = medianLeadsData[1].getElementsByTagName('WaveFormData')[0].firstChild.data
-        self.mLeadV1 = medianLeadsData[2].getElementsByTagName('WaveFormData')[0].firstChild.data
-        self.mLeadV2 = medianLeadsData[3].getElementsByTagName('WaveFormData')[0].firstChild.data
-        self.mLeadV3 = medianLeadsData[4].getElementsByTagName('WaveFormData')[0].firstChild.data
-        self.mLeadV4 = medianLeadsData[5].getElementsByTagName('WaveFormData')[0].firstChild.data
-        self.mLeadV5 = medianLeadsData[6].getElementsByTagName('WaveFormData')[0].firstChild.data
-        self.mLeadV6 = medianLeadsData[7].getElementsByTagName('WaveFormData')[0].firstChild.data
+        for diag in originalDiagnosisStatmentNodes:
+            ecg.originalDiagnosis.append(Diagnosis(diag, g_ecgID))
 
-        rythmnLeadsData = waveFormRythmn.getElementsByTagName('LeadData')
-        self.rLeadI = rythmnLeadsData[0].getElementsByTagName('WaveFormData')[0].firstChild.data
-        self.rLeadII = rythmnLeadsData[1].getElementsByTagName('WaveFormData')[0].firstChild.data
-        self.rLeadV1 = rythmnLeadsData[2].getElementsByTagName('WaveFormData')[0].firstChild.data
-        self.rLeadV2 = rythmnLeadsData[3].getElementsByTagName('WaveFormData')[0].firstChild.data
-        self.rLeadV3 = rythmnLeadsData[4].getElementsByTagName('WaveFormData')[0].firstChild.data
-        self.rLeadV4 = rythmnLeadsData[5].getElementsByTagName('WaveFormData')[0].firstChild.data
-        self.rLeadV5 = rythmnLeadsData[6].getElementsByTagName('WaveFormData')[0].firstChild.data
-        self.rLeadV6 = rythmnLeadsData[7].getElementsByTagName('WaveFormData')[0].firstChild.data
+        measurementMatrix = MeasurementMatrix(measurementMatrixNode, g_ecgID)
 
-    def ECGData(self):
-        medianLeadsSql = "'{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}'".format(self.mLeadI, self.mLeadII, self.mLeadV1, self.mLeadV2, self.mLeadV3, self.mLeadV4, self.mLeadV5, self.mLeadV6)
-        rythmnLeadsSql = "'{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}'".format(self.rLeadI, self.rLeadII, self.rLeadV1, self.rLeadV2, self.rLeadV3, self.rLeadV4, self.rLeadV5, self.rLeadV6)
-        return "'{0}', '{1}', '{2}', '{3}', ".format(self.patientID, self.patientAge, self.birth, self.gender) + medianLeadsSql + ',' + rythmnLeadsSql
+        intervalMeasurement = None
+        if intervalMeasurementNode is not None:
+            intervalMeasurement = IntervalMeasurement(intervalMeasurementNode, g_ecgID)
+
+        measuredAmplitudes = []
+        measuredIntervals = []
+
+        if measuredAmplitudeNodes is not None:
+            for ma in measuredAmplitudeNodes:
+                measuredAmplitude = MeasuredAmplitude(ma, g_ecgID)
+                measuredAmplitudes.append(measuredAmplitude)
+            intervalMeasurement.measuredIntervals = measuredIntervals
+
+        if measuredIntervalNodes is not None:
+            for mi in measuredIntervalNodes:
+                measuredInterval = MeasuredInterval(mi, g_intervalMeasurementID)
+                measuredIntervals.append(measuredInterval)
+
+        qrsTimesTypes = []
+        for qrs in qrsNodes:
+            qrsTimesType = QRSTimesType(qrs, g_ecgID)
+            qrsTimesTypes.append(qrsTimesType)
+
+        waveform = Waveform(waveFormsNode, g_ecgID)
+        leadData = []
+        for ld in leadDataNodes:
+            lead = LeadData(ld, g_waveformID)
+            leadData.append(lead)
+        waveform.leads = leadData
+
+        pharmaData = PharmaData(pharmaDataNode, g_ecgID)
+
+        # set relationship of ecg
+        ecg.patient = patient
+        ecg.measurements = measurements
+        ecg.originalMeasurements = originalMeasurements
+        ecg.measurementMatrix = measurementMatrix
+        ecg.intervalMeasurement = intervalMeasurement
+        ecg.measuredAmplitude = measuredAmplitudes
+        ecg.qrsTimesType = qrsTimesTypes
+        ecg.waveform = waveform
+        ecg.pharmaData = pharmaData
+
+        self.ecg = ecg
+
+        # increment index
+        g_ecgID += 1
+        g_intervalMeasurementID += 1
+        g_waveformID += 1
+
+    def __delattr__(self):
+        self.DOMTree.unlink()
+
+    def __repr__(self):
+        return 'ecg form:\necgID: {0}, dataType: {1}, number of leads: {2}'.format(g_ecgID, self.ecg.dataType, len(self.ecg.waveform.leads))
 
 class MySQLWriter:
 
     def __init__(self):
-        self.db = MySQLdb.connect('localhost', 'root', 'ym19950823', 'hearthorizon')
+        self.db = create_engine('mysql+mysqldb://root:ym19950823@localhost:3306/ecgtest?charset=utf8')
+        self.DBSession = sessionmaker(bind=self.db)
 
     # deconstructor
     def __delattr__(self):
-        self.db.close()
+        pass
 
     def insertECG(self, data):
-        cursor = self.db.cursor()
-
-        sql =  "INSERT INTO TEST(patientID, patientAge, birth, gender, mLeadI, mLeadII, mLeadV1, mLeadV2, mLeadV3, mLeadV4, mLeadV5, mLeadV6, rLeadI, rLeadII, rLeadV1, rLeadV2, rLeadV3, rLeadV4, rLeadV5, rLeadV6) VALUES ({0})".format(data)
-
+        session = self.DBSession()
+        session.add(data)
         try:
-            cursor.execute(sql)
-            self.db.commit()
+            session.commit()
         except Exception as e:
             print e
-            self.db.rollback()
+        session.close()
 
 if __name__ == '__main__':
 
@@ -102,12 +157,13 @@ if __name__ == '__main__':
         for file in ls:
             ext = file.split('.')[-1]
             if ext == 'xml':
-                print 'reading from: {}'.format(file)
-                reader = ECGReader(file)
-                writer.insertECG(reader.ECGData())
-                print 'write {} into database successfully'.format(file)
+                filepath = path + '/' + file
+                print 'reading from: {}'.format(filepath)
+                reader = ECGReader(filepath)
+                writer.insertECG(reader.ecg)
+                # print 'write {} into database successfully'.format(filepath)
                 del reader
     elif filename is not None:
         reader = ECGReader(filename)
-        writer.insertECG(reader.ECGData())
-        print 'write {} into database successfully'.format(filename)
+        writer.insertECG(reader.ecg)
+        # print 'write {} into database successfully'.format(filename)
