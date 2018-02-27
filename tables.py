@@ -118,8 +118,10 @@ class Measurement(Base):
     _ecgID = Column(Integer, ForeignKey('ecg.ecgID'))
 
     def __init__(self, xmlData, id):
-        self.ventricularRate = xmlData.getElementsByTagName('VentricularRate')[0].firstChild.data
-        self.atrialRate = xmlData.getElementsByTagName('AtrialRate')[0].firstChild.data
+        if len(xmlData.getElementsByTagName('VentricularRate')) != 0:
+            self.ventricularRate = xmlData.getElementsByTagName('VentricularRate')[0].firstChild.data
+        if len(xmlData.getElementsByTagName('AtrialRate')) != 0:
+            self.atrialRate = xmlData.getElementsByTagName('AtrialRate')[0].firstChild.data
         if len(xmlData.getElementsByTagName('PRInterval')) != 0:
             self.PRInterval = xmlData.getElementsByTagName('PRInterval')[0].firstChild.data
         if len(xmlData.getElementsByTagName('QRSDuration')) != 0:
