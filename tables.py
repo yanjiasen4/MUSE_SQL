@@ -150,7 +150,8 @@ class Measurement(Base):
             self.TOffset = xmlData.getElementsByTagName('TOffset')[0].firstChild.data
         self.ECGSampleBase = xmlData.getElementsByTagName('ECGSampleBase')[0].firstChild.data
         self.ECGSampleExponent = xmlData.getElementsByTagName('ECGSampleExponent')[0].firstChild.data
-        self.QTcFrederica = xmlData.getElementsByTagName('QTcFrederica')[0].firstChild.data
+        if len(xmlData.getElementsByTagName('QTcFrederica')) != 0:
+            self.QTcFrederica = xmlData.getElementsByTagName('QTcFrederica')[0].firstChild.data
 
         self._ecgID = id
 
