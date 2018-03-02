@@ -55,10 +55,10 @@ class Ecg(Base):
         self.priority = xmlData.getElementsByTagName('Priority')[0].firstChild.data
         self.location = xmlData.getElementsByTagName('Location')[0].firstChild.data
         self.acquisitionTime = datetime.datetime.strptime(xmlData.getElementsByTagName('AcquisitionTime')[0].firstChild.data, '%H:%M:%S').time()
-        self.acquisitionDate = datetime.datetime.strptime(xmlData.getElementsByTagName('AcquisitionDate')[0].firstChild.data, '%d-%m-%Y').date()
+        self.acquisitionDate = datetime.datetime.strptime(xmlData.getElementsByTagName('AcquisitionDate')[0].firstChild.data, '%m-%d-%Y').date()
         self.cartNumber = xmlData.getElementsByTagName('CartNumber')[0].firstChild.data
         self.editTime = datetime.datetime.strptime(xmlData.getElementsByTagName('EditTime')[0].firstChild.data, '%H:%M:%S').time()
-        self.editDate = datetime.datetime.strptime(xmlData.getElementsByTagName('EditDate')[0].firstChild.data, '%d-%m-%Y').date()
+        self.editDate = datetime.datetime.strptime(xmlData.getElementsByTagName('EditDate')[0].firstChild.data, '%m-%d-%Y').date()
         self.overreaderID = xmlData.getElementsByTagName('OverreaderID')[0].firstChild.data
         self.editorID = xmlData.getElementsByTagName('EditorID')[0].firstChild.data
         if len(xmlData.getElementsByTagName('TestReason')) != 0:
