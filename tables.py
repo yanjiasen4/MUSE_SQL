@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker, relationship
 import datetime
 import time
 
-engine = create_engine('mysql+mysqldb://root:ym19950823@localhost:3306/ecgtest?charset=utf8')
+engine = create_engine('mysql+mysqldb://username:password@localhost:3306/ecgtest?charset=utf8')
 
 Base = declarative_base()
 
