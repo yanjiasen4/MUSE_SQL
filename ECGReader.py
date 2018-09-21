@@ -123,7 +123,7 @@ class ECGReader:
 class MySQLWriter:
 
     def __init__(self):
-        self.db = create_engine('mysql+mysqldb://root:ym19950823@localhost:3306/ecgtest?charset=utf8')
+        self.db = create_engine('mysql+mysqldb://root:password@localhost:3306/ecgtest?charset=utf8')
         self.DBSession = sessionmaker(bind=self.db)
 
     # deconstructor
